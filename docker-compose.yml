@@ -1,0 +1,40 @@
+networks:
+  registry-net:
+    driver: bridge
+volumes:
+  registry-data:
+name: registry
+services:
+  microvikregistry.webapi:
+    image: vga815/microvik-registry:dev
+    container_name: registry-webapi
+    networks:
+        - registry-net
+    build:
+      context: .
+      dockerfile: MicroVikRegistry.WebApi/Dockerfile
+    environment:
+        ConnectionString: "User ID=postgres;Password=postgres;Host=main-db;Port=5432;Database=microvikregistry;"
+    depends_on:
+        - main-db
+  main-db:
+    container_name: main-db
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: microvikregistry
+      POSTGRES_USER: postgres
+    ports:
+      - 5432:5432
+    networks:
+      - registry-net
+    volumes:
+      - registry-data:/var/lib/postgresql/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: psql -U postgres -q -d postgres -c "SELECT 'ready';"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
